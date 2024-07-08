@@ -63,6 +63,10 @@ public class LocaleSchemaTests
 public class InterceptedContractResolver : IContractResolver
 {
    private readonly IContractResolver defaultResolver;
+   private InterceptSerializeDictionaryItem updatedIntercept;
+
+   private bool InterceptNeedsUpdating(JsonDictionaryContract jdc) =>
+      jdc.InterceptSerializeItem != this.updatedIntercept;
 
    public InterceptedContractResolver(IContractResolver defaultResolver)
    {
@@ -77,7 +81,7 @@ public class InterceptedContractResolver : IContractResolver
    public JsonContract ResolveContract(Type type)
    {
       var contract = this.defaultResolver.ResolveContract(type);
-      if( contract is JsonDictionaryContract jdc )
+      if( contract is JsonDictionaryContract jdc && InterceptNeedsUpdating(jdc) )
       {
          var defaultIntercept = jdc.InterceptSerializeItem;
          jdc.InterceptSerializeItem = (key, val) => { 
@@ -87,6 +91,7 @@ public class InterceptedContractResolver : IContractResolver
                var first = children.First();
                return InterceptResult.Replace($"[Array {first.Type}; {children.Count()}]");
             }
+            this.updatedIntercept = jdc.InterceptSerializeItem;
 
             return defaultIntercept(key, val);
          };
